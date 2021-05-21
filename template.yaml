@@ -42,6 +42,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.login
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SettingsTable
   AdjustFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -52,3 +55,6 @@ Resources:
           Properties:
             Name: QuarterHourSchedule
             Schedule: rate(15 minutes)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SettingsTable
