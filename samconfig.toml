@@ -1,0 +1,9 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "powerwall-controller"
+s3_prefix = "powerwall-controller"
+region = "us-west-2"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "OnPeakReserve=\"20\" TimeZone=\"America/Phoenix\" Debug=\"*:info\""

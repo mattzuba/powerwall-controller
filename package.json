@@ -9,7 +9,7 @@
     "preinvoke": "npm run predeploy",
     "invoke": "sam local invoke --docker-network lambda-local",
     "predeploy": "webpack",
-    "deploy": "cross-env-shell sam deploy --resolve-s3 --template-file template.yaml --stack-name Powerwall-Controller --parameter-overrides Debug=$DEBUG"
+    "deploy": "sam deploy --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset"
   },
   "author": "",
   "license": "BSD-3-clause",
