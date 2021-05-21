@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Powerwall Controller
+
+Parameters:
+  OnPeakReserve:
+    Description: Battery percentage to use for reserve on-peak
+    Type: Number
+    Default: 20
+    MaxValue: 100
+    MinValue: 0
+  TimeZone:
+    Description: Timezone to use
+    Type: String
+    Default: UTC
+  Debug:
+    Description: Debug level (debug npm package)
+    Type: String
+    Default: "*:info"
+
+Globals:
+  Function:
+    Timeout: 30
+    CodeUri: ./src
+    Runtime: nodejs14.x
+    AutoPublishAlias: live
+    Environment:
+      Variables:
+        RESERVE: !Ref OnPeakReserve
+        TZ: !Ref TimeZone
+        DEBUG: !Ref Debug
+
+Resources:
+  SettingsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: Settings
+      PrimaryKey:
+        Name: Key
+        Type: String
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.login
+  AdjustFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.adjuster
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Name: Hourly Schedule
+            Schedule: rate(15 minutes)

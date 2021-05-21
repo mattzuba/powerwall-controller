@@ -1,0 +1,28 @@
+{
+  "name": "powerwall-controller",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "cd src && npm install",
+    "lint": "semistandard ./src/**/*.js",
+    "preinvoke": "npm run predeploy",
+    "invoke": "sam local invoke --docker-network lambda-local",
+    "predeploy": "webpack",
+    "deploy": "cross-env-shell sam deploy --resolve-s3 --template-file template.yaml --stack-name Powerwall-Controller --parameter-overrides Debug=$DEBUG"
+  },
+  "author": "",
+  "license": "BSD-3-clause",
+  "devDependencies": {
+    "@babel/cli": "^7.13.14",
+    "@babel/core": "^7.13.14",
+    "@babel/plugin-proposal-throw-expressions": "^7.12.13",
+    "@babel/preset-env": "^7.13.12",
+    "aws-sam-webpack-plugin": "^0.9.0",
+    "babel-loader": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "semistandard": "^16.0.0",
+    "webpack": "^4.46.0",
+    "webpack-command": "^0.5.1"
+  }
+}
