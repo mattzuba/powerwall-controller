@@ -50,5 +50,5 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Name: Hourly Schedule
+            Name: QuarterHourSchedule
             Schedule: rate(15 minutes)
