@@ -18,19 +18,19 @@ export class Tesla {
     this.client.interceptors.response.use(response => {
       debug(response.data);
       return response;
-    })
+    });
   }
 
-  login({ username, password, mfaPassCode }) {
+  login ({ username, password, mfaPassCode }) {
     return new Promise((resolve, reject) => {
-      login({identity: username, credential: password, mfaPassCode }, (error, response, body) => {
+      login({ identity: username, credential: password, mfaPassCode }, (error, response, body) => {
         if (error !== null) {
           return reject(error);
         }
 
-        resolve({ authToken: body.access_token, expires: body.created_at + body.expires_in, refreshToken: body.refresh_token })
-      })
-    })
+        resolve({ authToken: body.access_token, expires: body.created_at + body.expires_in, refreshToken: body.refresh_token });
+      });
+    });
   }
 
   auth (token) {
@@ -51,7 +51,7 @@ export class Tesla {
     });
   }
 
-  async getBatteryInfo() {
+  async getBatteryInfo () {
     debug('Getting products on this Tesla account');
     const products = await this.client
       .get('/api/1/products').then(({ data }) => {
@@ -73,7 +73,7 @@ export class Tesla {
       .then(({ data }) => new Battery(battery.energy_site_id, data.response));
   }
 
-  setBatteryReserve(siteId, reserve) {
+  setBatteryReserve (siteId, reserve) {
     debug(`Setting reserve to ${reserve}%`);
     return this.client
       .post(`/api/1/energy_sites/${siteId}/backup`, { backup_reserve_percent: reserve })

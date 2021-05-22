@@ -4,11 +4,11 @@ export class Battery {
     this._batteryInfo = batteryInfo;
   }
 
-  isTou() {
+  isTou () {
     return this._batteryInfo.default_real_mode === 'autonomous';
   }
 
-  peakSchedule() {
+  peakSchedule () {
     if (!Array.isArray(this._batteryInfo?.tou_settings?.schedule)) {
       throw new Error('No TOU schedule is set');
     }
@@ -16,11 +16,11 @@ export class Battery {
     return this._batteryInfo.tou_settings.schedule.filter(block => block.target === 'peak');
   }
 
-  reserveLevel() {
+  reserveLevel () {
     return parseInt(this._batteryInfo.backup_reserve_percent);
   }
 
-  siteId() {
+  siteId () {
     return this._siteId;
   }
 }
