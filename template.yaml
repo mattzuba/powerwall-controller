@@ -77,3 +77,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SettingsTable
+
+Outputs:
+  BaseApi:
+    Description: "API Gateway Endpoint Base URL"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
