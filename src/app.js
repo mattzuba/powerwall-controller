@@ -36,6 +36,34 @@ export const login = async ({ body }) => {
   }
 };
 
+export const holiday = async ({ body }) => {
+  let currentHolidays;
+  try {
+    let { holiday, remove } = JSON.parse(body);
+    currentHolidays = await dynamo.getSetting('holidays') ?? [];
+
+    // Reformat our input into a known/trusted format
+    holiday = !Array.isArray(holiday) ? new Array(holiday) : holiday;
+    holiday = holiday.map(date => DateTime.fromSQL(date).toLocaleString());
+
+    currentHolidays = remove === true
+      ? currentHolidays.filter(day => !holiday.includes(day)) // Filter out anything that's already there
+      : [...new Set([...currentHolidays, ...holiday])]; // Or add the new ones.  Use a set to get unique entries
+
+    debug(`Setting holidays: ${JSON.stringify(currentHolidays)}`);
+
+    await dynamo.putSetting('holidays', currentHolidays);
+  } catch (e) {
+    throw new Error(`Error adjusting holidays: ${e.toString()}`);
+  }
+
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(currentHolidays)
+  };
+}
+
 export const adjuster = async () => {
 
   // Make sure authentication with the Tesla API is all set
@@ -49,7 +77,7 @@ export const adjuster = async () => {
     throw new Error('Battery is not in TOU mode, not setting backup reserve.');
   }
 
-  const desiredReserve = inPeakTime(battery.peakSchedule()) ? RESERVE : MAX_RESERVE;
+  const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? RESERVE : MAX_RESERVE;
 
   if (battery.reserveLevel() === desiredReserve) {
     info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
@@ -61,7 +89,14 @@ export const adjuster = async () => {
 };
 
 /**
- *
+ * @returns {Promise<*>}
+ */
+async function isHoliday() {
+  return dynamo.getSetting('holidays')
+    .then(holidays => Array.isArray(holidays) && holidays.includes(DateTime.now().toLocaleString()));
+}
+
+/**
  * @param peakSchedule
  * @returns {boolean}
  */

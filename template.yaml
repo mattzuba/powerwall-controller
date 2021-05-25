@@ -51,6 +51,19 @@ Resources:
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref SettingsTable
+  HolidayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.holiday
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Method: POST
+            Path: /holiday
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SettingsTable
   AdjustFunction:
     Type: AWS::Serverless::Function
     Properties:
