@@ -21,10 +21,6 @@ module.exports = {
   // Target node
   target: "node",
 
-  // AWS recommends always including the aws-sdk in your Lambda package but excluding can significantly reduce
-  // the size of the deployment package.
-  externals: process.env.NODE_ENV === "development" ? [] : ["aws-sdk"],
-
   // Set the webpack mode
   mode: process.env.NODE_ENV || "production",
 
