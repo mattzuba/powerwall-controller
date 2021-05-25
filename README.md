@@ -89,3 +89,8 @@ If you accidentally add a holiday you want to remove, it's easy as well:
 ```bash
 http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-12-25"]' remove:=true
 ```
+
+## Todo
+
+* Enable SNS notifications if settings fail to update
+* (Maybe) support more than one peak period
