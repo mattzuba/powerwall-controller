@@ -13,9 +13,11 @@ const tesla = new Tesla();
 const info = Debug('app:info');
 const debug = Debug('app:debug');
 
-export const login = async ({ username, password, mfaPassCode }) => {
+export const login = async ({ body }) => {
   try {
-    return tesla.login({username, password, mfaPassCode})
+    const { username, password, mfaPassCode } = JSON.parse(body);
+
+    await tesla.login({ username, password, mfaPassCode })
       .then(({ refreshToken, authToken, expires }) => {
         return Promise.all([
           dynamo.putSetting('refreshToken', refreshToken),
@@ -24,7 +26,13 @@ export const login = async ({ username, password, mfaPassCode }) => {
         ]);
       });
   } catch (e) {
-    return new Error(`Error getting a refresh token, check your username, password or MFA token and try again: ${e.toString()}`);
+    throw new Error(`Error getting a refresh token, check your username, password or MFA token and try again: ${e.toString()}`);
+  }
+
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: "Login successful"
   }
 };
 
@@ -103,7 +111,7 @@ async function prepareTeslaClient () {
 
   // If we don't have a authToken or it's expired, refresh it
   if (typeof authToken === 'undefined' || DateTime.fromSeconds(tokenExpires) < now) {
-    debug('No auth token or it is expired, getting new one with refresh token');
+    info('No auth token or it is expired, getting new one with refresh token');
 
     // Make sure we have a refresh token
     if (typeof refreshToken === 'undefined') {

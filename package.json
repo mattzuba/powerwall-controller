@@ -6,9 +6,9 @@
   "scripts": {
     "postinstall": "cd src && npm install",
     "lint": "semistandard ./src/**/*.js",
-    "preinvoke": "npm run predeploy",
-    "invoke": "sam local invoke --docker-network lambda-local",
-    "predeploy": "webpack",
+    "invoke": "npm run build && sam local invoke --docker-network lambda-local",
+    "start-api": "npm run build && sam local start-api --docker-network lambda-local",
+    "build": "webpack",
     "deploy": "sam deploy --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset"
   },
   "author": "",

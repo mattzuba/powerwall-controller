@@ -42,6 +42,12 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.login
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Method: POST
+            Path: /login
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref SettingsTable
