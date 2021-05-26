@@ -1,15 +1,18 @@
 'use strict';
 
-import { Dynamo } from './lib/dynamo.js';
-import { Tesla } from './lib/tesla.js';
 import { DateTime, Interval } from 'luxon';
 import Debug from 'debug';
+import { Dynamo } from './lib/dynamo.js';
+import { Sns } from './lib/sns.js';
+import { Tesla } from './lib/tesla.js';
 
 const MAX_RESERVE = 100;
 const RESERVE = parseInt(process.env.RESERVE);
 
 const dynamo = new Dynamo();
 const tesla = new Tesla();
+const sns = new Sns();
+
 const info = Debug('app:info');
 const debug = Debug('app:debug');
 
@@ -35,6 +38,21 @@ export const login = async ({ body }) => {
     body: "Login successful"
   }
 };
+
+export const notify = async ({ body }) => {
+  try {
+    let { email } = JSON.parse(body);
+    await sns.subscribe(email);
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: `Subscribe started, please check your email at ${email} to confirm the subscription`
+    }
+  } catch (e) {
+    throw new Error(`Error subscribing to SNS topic: ${e.toString()}`);
+  }
+}
 
 export const holiday = async ({ body }) => {
   let currentHolidays;
@@ -62,30 +80,34 @@ export const holiday = async ({ body }) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(currentHolidays)
   };
-}
+};
 
 export const adjuster = async () => {
+  try {
+    // Make sure authentication with the Tesla API is all set
+    await prepareTeslaClient();
 
-  // Make sure authentication with the Tesla API is all set
-  await prepareTeslaClient();
+    // Get the on-oeak hours and see if we should be in on-peak mode
+    const battery = await tesla.getBatteryInfo();
 
-  // Get the on-oeak hours and see if we should be in on-peak mode
-  const battery = await tesla.getBatteryInfo();
+    // Make sure we're in the right mode first of all
+    if (!battery.isTou()) {
+      throw new Error('Battery is not in TOU mode, not setting backup reserve.');
+    }
 
-  // Make sure we're in the right mode first of all
-  if (!battery.isTou()) {
-    throw new Error('Battery is not in TOU mode, not setting backup reserve.');
+    const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? RESERVE : MAX_RESERVE;
+
+    if (battery.reserveLevel() === desiredReserve) {
+      info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
+      return;
+    }
+
+    info(`Reserve level (${battery.reserveLevel()}%) does not match desired reserve (${desiredReserve}%); updating`);
+    await tesla.setBatteryReserve(battery.siteId(), desiredReserve);
+  } catch (e) {
+    const message = `There was a problem setting the battery reserve.\n\nHere was the error encountered: ${e.toString()}`;
+    await sns.notify('Error setting Tesla Battery Reserve', message);
   }
-
-  const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? RESERVE : MAX_RESERVE;
-
-  if (battery.reserveLevel() === desiredReserve) {
-    info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
-    return;
-  }
-
-  info(`Reserve level (${battery.reserveLevel()}%) does not match desired reserve (${desiredReserve}%); updating`);
-  await tesla.setBatteryReserve(battery.siteId(), desiredReserve);
 };
 
 /**

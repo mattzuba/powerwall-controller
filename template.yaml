@@ -38,6 +38,8 @@ Resources:
       PrimaryKey:
         Name: Key
         Type: String
+  NotificationTopic:
+    Type: AWS::SNS::Topic
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -51,6 +53,22 @@ Resources:
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref SettingsTable
+  NotifyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.notify
+      Environment:
+        Variables:
+          SNS_TOPIC: !Ref NotificationTopic
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Method: POST
+            Path: /notify
+      Policies:
+        - SNSCrudPolicy:
+            TopicName: !GetAtt NotificationTopic.TopicName
   HolidayFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -68,6 +86,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.adjuster
+      Environment:
+        Variables:
+          SNS_TOPIC: !Ref NotificationTopic
       Events:
         Schedule:
           Type: Schedule
@@ -77,6 +98,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SettingsTable
+        - SNSCrudPolicy:
+            TopicName: !GetAtt NotificationTopic.TopicName
 
 Outputs:
   BaseApi:

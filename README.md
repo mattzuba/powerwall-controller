@@ -92,5 +92,4 @@ http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:=
 
 ## Todo
 
-* Enable SNS notifications if settings fail to update
 * (Maybe) support more than one peak period
