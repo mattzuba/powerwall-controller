@@ -5,6 +5,7 @@ import Debug from 'debug';
 import { Dynamo } from './lib/dynamo.js';
 import { Sns } from './lib/sns.js';
 import { Tesla } from './lib/tesla.js';
+import { cfnResponse, SUCCESS } from './lib/cfn-response.js';
 
 const MAX_RESERVE = 100;
 const RESERVE = parseInt(process.env.RESERVE);
@@ -17,6 +18,7 @@ const info = Debug('app:info');
 const debug = Debug('app:debug');
 
 export const login = async ({ body }) => {
+  debug(`Request body: ${body}`);
   try {
     const { username, password, mfaPassCode } = JSON.parse(body);
 
@@ -40,6 +42,7 @@ export const login = async ({ body }) => {
 };
 
 export const notify = async ({ body }) => {
+  debug(`Request body: ${body}`);
   try {
     let { email } = JSON.parse(body);
     await sns.subscribe(email);
@@ -55,6 +58,7 @@ export const notify = async ({ body }) => {
 }
 
 export const holiday = async ({ body }) => {
+  debug(`Request body: ${body}`);
   let currentHolidays;
   try {
     let { holiday, remove } = JSON.parse(body);
@@ -95,7 +99,9 @@ export const adjuster = async () => {
       throw new Error('Battery is not in TOU mode, not setting backup reserve.');
     }
 
-    const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? RESERVE : MAX_RESERVE;
+    const peakReserve = await dynamo.getSetting('peakReserve') ?? 20;
+
+    const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? peakReserve : MAX_RESERVE;
 
     if (battery.reserveLevel() === desiredReserve) {
       info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
@@ -109,6 +115,28 @@ export const adjuster = async () => {
     await sns.notify('Error setting Tesla Battery Reserve', message);
   }
 };
+
+export const reserve = async ({ body }) => {
+  debug(`Request body: ${body}`);
+  try {
+    // This could be called from either API or during deploy, handle both
+    let { peakReserve } = JSON.parse(body);
+
+    // Make sure it's been 5 and 100%
+    peakReserve = Math.max(Math.min(100, peakReserve ?? 5), 5);
+
+    // Set the value in DynamoDB
+    await dynamo.putSetting('peakReserve', peakReserve);
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: `Peak reserve set to ${peakReserve}`
+    };
+  } catch (e) {
+    throw new Error(`Error adjusting holidays: ${e.toString()}`);
+  }
+}
 
 /**
  * @returns {Promise<*>}

@@ -26,7 +26,6 @@ Globals:
     AutoPublishAlias: live
     Environment:
       Variables:
-        RESERVE: !Ref OnPeakReserve
         TZ: !Ref TimeZone
         DEBUG: !Ref Debug
 
@@ -100,6 +99,20 @@ Resources:
             TableName: !Ref SettingsTable
         - SNSCrudPolicy:
             TopicName: !GetAtt NotificationTopic.TopicName
+  PeakReserveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.reserve
+      Runtime: nodejs14.x
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Method: POST
+            Path: /reserve
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SettingsTable
 
 Outputs:
   BaseApi:

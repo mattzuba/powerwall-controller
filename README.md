@@ -1,16 +1,17 @@
 ## Introduction
 
-I wrote this AWS Lambda-based script to manage my Powerwalls with a bit more fine-grained control than what the Tesla app offers.  Because of my power company's higher export rate that I've locked into for 10 years (10.45c/kWh), and the low cost of off-peak electricity on my current plan (5.23c/kWh), I can leverage this arbitrage to use my system to my cost-advantage.  I need to feed as much electricity to the grid as I can (minimizing power consumption during the day) and use as much from the grid as I can (maximizing power consumption during the night).
+I wrote this AWS Lambda-based script to manage my Powerwalls with a bit more fine-grained control than what the Tesla app offers.  Because of my power company's higher export rate that I've locked into for 10 years (10.45c/kWh), and the low cost of off-peak electricity on my current plan (5.23c/kWh), I can leverage this arbitrage to use my system to my cost-advantage to only use the Powerwalls during peak time (peak shaving) and use solar/grid at all other times.
 
-I accept the fact that this is not the most environmentally friendly option; one with solar + storage should probably aim to be as self-reliant as possible.  But I'm tired of the monopoly of the power companies with their less than desirable renewable energy stance when they don't control it, so I'm leveraging this loophole to recoup my investment sooner.
+I accept the fact that this is not the most environmentally friendly option; one with solar+storage should probably aim to be as self-reliant as possible.  But I'm tired of the monopoly of the power companies with their less than desirable renewable energy stance when they don't control it, so I'm leveraging this loophole to recoup my investment sooner.
 
-## Tesla Shortcomings
+## Advantages of this script
 
-Tesla's app doesn't have a mode that suits my needs - namely - only use the Powerwall during peak times.  It does have some advanced time-of-use (TOU) settings (which this script actually utilizes), but they don't go far enough.  Using Tesla's out-of-the-box TOU control, my Powerwalls still get used overnight, on weekends and on power company holidays.
+Tesla's app doesn't have a mode that suits my needs - namely - only use the Powerwall during peak times.  It does have some advanced time-of-use (TOU) settings (which this script actually utilizes), but they don't go far enough.  Using Tesla's out-of-the-box TOU control, my Powerwalls still get used overnight, on weekends and on power company holidays.  Thus, this script provides the following improvements:
 
-## Improvements
-
-This script handles all the issues above by leveraging the Peak TOU settings from the Tesla app to set the battery reserve to a lower level only during peak periods, and then to 100% during all the times above so that the Powerwalls are not used.
+* Leverages Tesla's TOU settings to change the battery reserve to a reasonable value at peak time, and 100% at all other times
+* Configurable reserve during peak time
+* Notifications of failures to adjust reserve
+* Holiday support where holidays are off-peak all day
 
 ## Setup
 
@@ -40,40 +41,41 @@ You'll also want to update the samconfig.toml and change the parameter overrides
 
 ## Configuration
 
-Use a tool like httpie (used below) or cURL to remotely call the login endpoint.
+### Login
+
+Use a tool like httpie (used below) or cURL to remotely call the login endpoint.  This is the bare minimum for this to simply start working.
 
 ```bash
-$ http post http://endpoint..execute-api.us-east-1.amazonaws.com/login username=AzureDiamond@gmail.com password=hunter2 mfaPassCode=000000
+$ http post http://endpoint.execute-api.us-east-1.amazonaws.com/login username=AzureDiamond@gmail.com password=hunter2 mfaPassCode=000000
 ```
 
-If all goes well, you should see output like the following:
+### Peak Reserve
+
+The default Peak Reserve is set to 20% during peak time.  If you'd like to change that, a simple API call can adjust that like so:
 
 ```bash
-HTTP/1.0 200 OK
-Content-Length: 16
-Content-Type: application/json
-Date: Tue, 25 May 2021 00:17:24 GMT
-Server: Werkzeug/1.0.1 Python/3.9.0
-
-Login successful
+$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/reserve PeakReserve=30
 ```
 
-At this point, everything will start working.  If you'd like to configure/add holidays where the entire day is off-peak, you can add them like so:
+### Notifications
+
+If you'd like to get an email notification if the script fails to adjust the peak reserve, you'll want to call this API endpoint to subscribe to the notification topic.  Be sure to check your email afterwards to confirm the subscription.  Note that if something causes the adjustment to fail, and it's not a temporary failure, you'll receive an email alert every 15 minutes when it continues to try.
 
 ```bash
-http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-07-04", "2021-09-06", "2021-11-11", "2021-11-25", "2021-12-25"]'
+$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/notify email=AzureDiamond@gmail.com
+```
+
+### Holidays
+
+If you'd like to configure/add holidays where the entire day is off-peak, you can add them like so:
+
+```bash
+$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-07-04", "2021-09-06", "2021-11-11", "2021-11-25", "2021-12-25"]'
 ```
 
 The output will be a list of all holidays currently in the database:
 
 ```bash
-HTTP/1.1 200 OK
-Apigw-Requestid: f3B6ZhMRoAMEVuQ=
-Connection: keep-alive
-Content-Length: 74
-Content-Type: application/json
-Date: Tue, 25 May 2021 00:50:36 GMT
-
 [
     "5/31/2021",
     "7/4/2021",
@@ -87,9 +89,11 @@ Date: Tue, 25 May 2021 00:50:36 GMT
 If you accidentally add a holiday you want to remove, it's easy as well:
 
 ```bash
-http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-12-25"]' remove:=true
+$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-12-25"]' remove:=true
 ```
 
 ## Todo
 
 * (Maybe) support more than one peak period
+* Potentially support shoulder periods where the use of the Powerwall may be desired if the export rate is less than shoulder rate.
+* De

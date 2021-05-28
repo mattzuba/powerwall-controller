@@ -6,8 +6,8 @@ stack_name = "powerwall-controller"
 s3_prefix = "powerwall-controller"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "OnPeakReserve=\"20\" TimeZone=\"America/Phoenix\" Debug=\"*:info\""
+parameter_overrides = "TimeZone=\"America/Phoenix\" Debug=\"*:info\""
 
 [default.local_start_api.parameters]
 [default.local_invoke.parameters]
-parameter_overrides = "OnPeakReserve=\"20\" TimeZone=\"America/Phoenix\" Debug=\"*,-follow-redirects\""
+parameter_overrides = "TimeZone=\"America/Phoenix\" Debug=\"*,-follow-redirects\""

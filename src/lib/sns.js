@@ -1,5 +1,4 @@
 import { SNSClient, SubscribeCommand, PublishCommand } from '@aws-sdk/client-sns';
-import Debug from 'debug';
 
 const SNS_TOPIC = process.env.SNS_TOPIC;
 
