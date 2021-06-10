@@ -90,10 +90,20 @@ export const adjuster = async () => {
   try {
     // Make sure authentication with the Tesla API is all set
     await prepareTeslaClient();
+  } catch (e) {
+    const message = `There was a problem configuring the tesla api client.  Here was the error encountered:\n\n${e.toString()}`;
+    await sns.notify('Error adjusting Tesla Battery Reserve', message);
+  }
 
+  try {
     // Get the on-oeak hours and see if we should be in on-peak mode
     const battery = await tesla.getBatteryInfo();
+  } catch (e) {
+    const message = `There was a problem getting battery information.  Here was the error encountered:\n\n${e.toString()}`;
+    await sns.notify('Error adjusting Tesla Battery Reserve', message);
+  }
 
+  try {
     // Make sure we're in the right mode first of all
     if (!battery.isTou()) {
       throw new Error('Battery is not in TOU mode, not setting backup reserve.');
@@ -111,8 +121,8 @@ export const adjuster = async () => {
     info(`Reserve level (${battery.reserveLevel()}%) does not match desired reserve (${desiredReserve}%); updating`);
     await tesla.setBatteryReserve(battery.siteId(), desiredReserve);
   } catch (e) {
-    const message = `There was a problem setting the battery reserve.\n\nHere was the error encountered: ${e.toString()}`;
-    await sns.notify('Error setting Tesla Battery Reserve', message);
+    const message = `There was a problem setting the battery reserve.  Here was the error encountered:\n\n${e.toString()}`;
+    await sns.notify('Error adjusting Tesla Battery Reserve', message);
   }
 };
 
