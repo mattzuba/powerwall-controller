@@ -35,9 +35,11 @@ If you want to toy with this locally, you'll need to install the following:
 
 ## Deployment
 
-This script uses Github actions to deploy to AWS, the only thing you need to do is log into the AWS Console and generate an access key and secret key and store those in your Secrets in Github (see .github/workflows/deploy.yml for key names).
+This script uses Github actions to deploy to AWS, the only thing you need to do is log into the AWS Console and generate an access key and secret key and store those in your Secrets in Github.
 
-You'll also want to update the samconfig.toml and change the parameter overrides as necessary.  Once the script successfully deploys, you can begin remote configuration.  View the output from the deploy in Github actions to see the AWS API Gateway endpoint in the `npm run deploy` step.
+![image](https://user-images.githubusercontent.com/1494713/120593934-01d3e580-c3f5-11eb-8646-1112497daa52.png)
+
+You'll also want to update the `samconfig.toml` and change the parameter overrides as necessary.  Once the script successfully deploys, you can begin remote configuration.  View the output from the deploy in Github actions to see the AWS API Gateway endpoint in the `npm run deploy` step.
 
 ## Configuration
 
