@@ -95,9 +95,10 @@ export const adjuster = async () => {
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
   }
 
+  let battery;
   try {
     // Get the on-oeak hours and see if we should be in on-peak mode
-    const battery = await tesla.getBatteryInfo();
+    battery = await tesla.getBatteryInfo();
   } catch (e) {
     const message = `There was a problem getting battery information.  Here was the error encountered:\n\n${e.toString()}`;
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
