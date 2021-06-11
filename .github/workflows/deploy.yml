@@ -1,6 +1,8 @@
 name: Deploy To AWS
 on:
   push:
+    branches:
+      - master
     paths-ignore:
       - README.md
 
