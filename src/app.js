@@ -93,6 +93,7 @@ export const adjuster = async () => {
   } catch (e) {
     const message = `There was a problem configuring the tesla api client.  Here was the error encountered:\n\n${e.toString()}`;
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
+    return;
   }
 
   let battery;
@@ -102,6 +103,7 @@ export const adjuster = async () => {
   } catch (e) {
     const message = `There was a problem getting battery information.  Here was the error encountered:\n\n${e.toString()}`;
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
+    return;
   }
 
   try {
