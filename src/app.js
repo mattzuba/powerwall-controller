@@ -5,7 +5,6 @@ import Debug from 'debug';
 import { Dynamo } from './lib/dynamo.js';
 import { Sns } from './lib/sns.js';
 import { Tesla } from './lib/tesla.js';
-import { cfnResponse, SUCCESS } from './lib/cfn-response.js';
 
 const MAX_RESERVE = 100;
 const RESERVE = parseInt(process.env.RESERVE);
