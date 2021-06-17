@@ -6,8 +6,8 @@
   "scripts": {
     "postinstall": "cd src && npm install",
     "lint": "semistandard ./src/**/*.js",
-    "invoke": "npm run build && sam local invoke --docker-network lambda-local",
-    "start-api": "npm run build && sam local start-api --docker-network lambda-local",
+    "invoke": "npm run build && sam local invoke",
+    "start-api": "npm run build && sam local start-api",
     "build": "webpack",
     "deploy": "sam deploy --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset"
   },
