@@ -3,12 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: Powerwall Controller
 
 Parameters:
-  OnPeakReserve:
-    Description: Battery percentage to use for reserve on-peak
-    Type: Number
-    Default: 20
-    MaxValue: 100
-    MinValue: 0
   TimeZone:
     Description: Timezone to use
     Type: String

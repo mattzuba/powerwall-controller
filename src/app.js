@@ -7,7 +7,6 @@ import { Sns } from './lib/sns.js';
 import { Tesla } from './lib/tesla.js';
 
 const MAX_RESERVE = 100;
-const RESERVE = parseInt(process.env.RESERVE);
 
 const dynamo = new Dynamo();
 const tesla = new Tesla();
