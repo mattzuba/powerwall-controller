@@ -5,6 +5,7 @@ import Debug from 'debug';
 import { Dynamo } from './lib/dynamo.js';
 import { Sns } from './lib/sns.js';
 import { Tesla } from './lib/tesla.js';
+import { to } from './lib/to.js';
 
 const MAX_RESERVE = 100;
 
@@ -17,20 +18,16 @@ const debug = Debug('app:debug');
 
 export const login = async ({ body }) => {
   debug(`Request body: ${body}`);
-  try {
-    const { username, password, mfaPassCode } = JSON.parse(body);
+  const { username, password, mfaPassCode } = JSON.parse(body);
 
-    await tesla.login({ username, password, mfaPassCode })
-      .then(({ refreshToken, authToken, expires }) => {
-        return Promise.all([
-          dynamo.putSetting('refreshToken', refreshToken),
-          dynamo.putSetting('authToken', authToken),
-          dynamo.putSetting('tokenExpires', expires)
-        ]);
-      });
-  } catch (e) {
-    throw new Error(`Error getting a refresh token, check your username, password or MFA token and try again: ${e.toString()}`);
-  }
+  let [err, { refreshToken, authToken, expires }] = await to(tesla.login({ username, password, mfaPassCode }));
+  if (err) throw new Error(`Error getting a refresh token, check your username, password or MFA token and try again: ${err.toString()}`);
+
+  await Promise.all([
+    dynamo.putSetting('refreshToken', refreshToken),
+    dynamo.putSetting('authToken', authToken),
+    dynamo.putSetting('tokenExpires', expires)
+  ]);
 
   return {
     statusCode: 200,
@@ -85,20 +82,18 @@ export const holiday = async ({ body }) => {
 };
 
 export const adjuster = async () => {
-  try {
-    // Make sure authentication with the Tesla API is all set
-    await prepareTeslaClient();
-  } catch (e) {
-    const message = `There was a problem configuring the tesla api client.  Here was the error encountered:\n\n${e.toString()}`;
+  let err, battery;
+  // Make sure authentication with the Tesla API is all set
+  [err] = await to(prepareTeslaClient());
+  if (err) {
+    const message = `There was a problem configuring the tesla api client.  Here was the error encountered:\n\n${err.toString()}`;
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
     return;
   }
 
-  let battery;
-  try {
     // Get the on-oeak hours and see if we should be in on-peak mode
-    battery = await tesla.getBatteryInfo();
-  } catch (e) {
+  [err, battery] = await to(tesla.getBatteryInfo());
+  if (err) {
     const message = `There was a problem getting battery information.  Here was the error encountered:\n\n${e.toString()}`;
     await sns.notify('Error adjusting Tesla Battery Reserve', message);
     return;
@@ -194,40 +189,35 @@ function inPeakTime(peakSchedule) {
  */
 async function prepareTeslaClient () {
   const now = DateTime.now();
-  let refreshToken, authToken, tokenExpires;
-  try {
-    [refreshToken, authToken, tokenExpires] = await Promise.all([
-      dynamo.getSetting('refreshToken'),
-      dynamo.getSetting('authToken'),
-      dynamo.getSetting('tokenExpires')
-    ]);
-  } catch (e) {
-    throw new Error(`Error getting tokens from DynamoDB: ${e.toString()}`);
+  let refreshToken, authToken, expires, err;
+
+  [err, [refreshToken, authToken, expires]] = await to(Promise.all([
+    dynamo.getSetting('refreshToken'),
+    dynamo.getSetting('authToken'),
+    dynamo.getSetting('tokenExpires')
+  ]));
+  if (err) throw new Error(`Error getting tokens from DynamoDB: ${err.toString()}`);
+
+  // If we have a authToken and it's not expired, use it
+  if (typeof authToken === 'string' && DateTime.fromSeconds(expires) > now) {
+    return tesla.auth(authToken);
   }
 
-  // If we don't have a authToken or it's expired, refresh it
-  if (typeof authToken === 'undefined' || DateTime.fromSeconds(tokenExpires) < now) {
-    info('No auth token or it is expired, getting new one with refresh token');
+  info('No auth token or it is expired, getting new one with refresh token');
 
-    // Make sure we have a refresh token
+  // Make sure we have a refresh token
     if (typeof refreshToken === 'undefined') {
-      throw new Error('Unable to get new auth token, no refresh token');
-    }
-
-    try {
-      authToken = await tesla
-        .refresh(refreshToken)
-        .then(({ refreshToken, authToken, expires }) => {
-          dynamo.putSetting('refreshToken', refreshToken);
-          dynamo.putSetting('authToken', authToken);
-          dynamo.putSetting('tokenExpires', expires);
-
-          return authToken;
-        });
-    } catch (e) {
-      throw new Error(`Error refreshing token from Tesla: ${e.toString()}`);
-    }
+    throw new Error('Unable to get new auth token, no refresh token');
   }
+
+  [err, { refreshToken, authToken, expires }] = await to(tesla.refresh(refreshToken));
+  if (err) throw new Error(`Error refreshing token from Tesla: ${err.toString()}`);
+
+  await Promise.all([
+    dynamo.putSetting('refreshToken', refreshToken),
+    dynamo.putSetting('authToken', authToken),
+    dynamo.putSetting('tokenExpires', expires)
+  ]);
 
   tesla.auth(authToken);
 }
