@@ -2,3 +2,4 @@ node_modules
 .aws-sam
 .s3-build
 fixtures
+.env.json
