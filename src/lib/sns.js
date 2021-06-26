@@ -1,4 +1,9 @@
-import { SNSClient, SubscribeCommand, PublishCommand } from '@aws-sdk/client-sns';
+import {
+  SNSClient,
+  SubscribeCommand,
+  PublishCommand,
+  ListSubscriptionsByTopicCommand, UnsubscribeCommand
+} from '@aws-sdk/client-sns';
 
 const SNS_TOPIC = process.env.SNS_TOPIC;
 
@@ -13,6 +18,22 @@ export class Sns {
       Protocol: 'email',
       Endpoint: email
     }));
+  }
+
+  unsubscribe (SubscriptionArn) {
+    return this.client.send(new UnsubscribeCommand({
+      SubscriptionArn
+    }));
+  }
+
+  getSubscriptions () {
+    return this.client.send(new ListSubscriptionsByTopicCommand({
+      TopicArn: SNS_TOPIC
+    })).then(({ Subscriptions }) => {
+      return Subscriptions.map(({ Endpoint, SubscriptionArn }) => {
+        return { Endpoint, SubscriptionArn };
+      });
+    });
   }
 
   notify (subject, message) {

@@ -11,6 +11,7 @@ export class Dynamo {
   }
 
   putSetting (Key, Value) {
+    debug(`Putting '${Key}' with ${JSON.stringify(Value)}`);
     return this.client
       .send(new PutCommand({ TableName: 'Settings', Item: { Key, Value } }))
       .then(response => {
@@ -27,13 +28,4 @@ export class Dynamo {
         return response.Item?.Value;
       });
   }
-
-  // getHolidays (year) {
-  //   return this.client
-  //     .send(new GetItemCommand({ TableName: 'Holidays', Key: { Year: { N: year } } }))
-  //     .then(response => {
-  //       debug(`GetItemCommand Response from DynamoDB: ${JSON.stringify(response)}`);
-  //       return response.item?.Value?.S;
-  //     });
-  // }
 }

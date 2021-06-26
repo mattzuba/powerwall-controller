@@ -7,6 +7,7 @@ import { Sns } from './lib/sns.js';
 import { Tesla } from './lib/tesla.js';
 import { to } from './lib/to.js';
 
+const DEFAULT_PEAK_RESERVE = 20;
 const MAX_RESERVE = 100;
 
 const dynamo = new Dynamo();
@@ -30,126 +31,137 @@ export const login = async ({ body }) => {
   ]);
 
   return {
-    statusCode: 200,
-    headers: { "Content-Type": "application/json" },
-    body: "Login successful"
+    statusCode: 204,
+    body: ""
   }
 };
 
-export const notify = async ({ body }) => {
-  debug(`Request body: ${body}`);
-  try {
-    let { email } = JSON.parse(body);
-    await sns.subscribe(email);
+export const settings = async ({ body, pathParameters: { setting }, requestContext: { http: { method: httpMethod }} }) => {
+  debug(`Request body: ${body}; Setting: ${setting}; Method: ${httpMethod}`);
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: `Subscribe started, please check your email at ${email} to confirm the subscription`
-    }
-  } catch (e) {
-    throw new Error(`Error subscribing to SNS topic: ${e.toString()}`);
+  if (httpMethod.toLowerCase() === 'get') {
+    return getSetting(setting);
   }
+
+  if (httpMethod.toLowerCase() !== 'post') {
+    throw new Error(`Method not supported for settings function: ${httpMethod}`);
+  }
+
+  return updateSetting(setting, JSON.parse(body));
 }
 
-export const holiday = async ({ body }) => {
-  debug(`Request body: ${body}`);
-  let currentHolidays;
-  try {
-    let { holiday, remove } = JSON.parse(body);
-    currentHolidays = await dynamo.getSetting('holidays') ?? [];
+async function getSetting(setting) {
+  let response;
 
-    // Reformat our input into a known/trusted format
-    holiday = !Array.isArray(holiday) ? new Array(holiday) : holiday;
-    holiday = holiday.map(date => DateTime.fromSQL(date).toLocaleString());
+  switch (setting) {
+    case 'notify':
+      response = await sns.getSubscriptions();
+      break;
 
-    currentHolidays = remove === true
-      ? currentHolidays.filter(day => !holiday.includes(day)) // Filter out anything that's already there
-      : [...new Set([...currentHolidays, ...holiday])]; // Or add the new ones.  Use a set to get unique entries
+    case 'holiday':
+      response = await dynamo.getSetting('holidays') ?? [];
+      break;
 
-    debug(`Setting holidays: ${JSON.stringify(currentHolidays)}`);
+    case 'reserve':
+      response = await dynamo.getSetting('peakReserve') ?? DEFAULT_PEAK_RESERVE
+      break;
 
-    await dynamo.putSetting('holidays', currentHolidays);
-  } catch (e) {
-    throw new Error(`Error adjusting holidays: ${e.toString()}`);
+    default:
+      response = await Promise.all([
+          sns.getSubscriptions(),
+          dynamo.getSetting('holidays'),
+          dynamo.getSetting('peakReserve')
+        ]).then(([ notify, holiday, reserve ]) => ({ notify, holiday: holiday ?? [], reserve: reserve ?? DEFAULT_PEAK_RESERVE }));
   }
 
   return {
     statusCode: 200,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(currentHolidays)
-  };
-};
-
-export const adjuster = async () => {
-  let err, battery;
-  // Make sure authentication with the Tesla API is all set
-  [err] = await to(prepareTeslaClient());
-  if (err) {
-    const message = `There was a problem configuring the tesla api client.  Here was the error encountered:\n\n${err.toString()}`;
-    await sns.notify('Error adjusting Tesla Battery Reserve', message);
-    return;
-  }
-
-    // Get the on-oeak hours and see if we should be in on-peak mode
-  [err, battery] = await to(tesla.getBatteryInfo());
-  if (err) {
-    const message = `There was a problem getting battery information.  Here was the error encountered:\n\n${e.toString()}`;
-    await sns.notify('Error adjusting Tesla Battery Reserve', message);
-    return;
-  }
-
-  try {
-    // Make sure we're in the right mode first of all
-    if (!battery.isTou()) {
-      throw new Error('Battery is not in TOU mode, not setting backup reserve.');
-    }
-
-    const peakReserve = await dynamo.getSetting('peakReserve') ?? 20;
-
-    const desiredReserve = !await isHoliday() && inPeakTime(battery.peakSchedule()) ? peakReserve : MAX_RESERVE;
-
-    if (battery.reserveLevel() === desiredReserve) {
-      info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
-      return;
-    }
-
-    info(`Reserve level (${battery.reserveLevel()}%) does not match desired reserve (${desiredReserve}%); updating`);
-    await tesla.setBatteryReserve(battery.siteId(), desiredReserve);
-  } catch (e) {
-    const message = `There was a problem setting the battery reserve.  Here was the error encountered:\n\n${e.toString()}`;
-    await sns.notify('Error adjusting Tesla Battery Reserve', message);
-  }
-};
-
-export const reserve = async ({ body }) => {
-  debug(`Request body: ${body}`);
-  try {
-    // This could be called from either API or during deploy, handle both
-    let { peakReserve } = JSON.parse(body);
-
-    // Make sure it's been 5 and 100%
-    peakReserve = Math.max(Math.min(100, peakReserve ?? 5), 5);
-
-    // Set the value in DynamoDB
-    await dynamo.putSetting('peakReserve', peakReserve);
-
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: `Peak reserve set to ${peakReserve}`
-    };
-  } catch (e) {
-    throw new Error(`Error adjusting holidays: ${e.toString()}`);
+    body: JSON.stringify(response)
   }
 }
 
+async function updateSetting(setting, data) {
+  switch (setting) {
+    case 'notify':
+      let { email } = data;
+      await sns.subscribe(email);
+      break;
+
+    case 'holiday':
+      let { holiday, remove } = data;
+      let currentHolidays = await dynamo.getSetting('holidays') ?? [];
+
+      // Reformat our input into a known/trusted format
+      holiday = !Array.isArray(holiday) ? new Array(holiday) : holiday;
+      holiday = holiday.map(date => DateTime.fromSQL(date).toLocaleString());
+
+      currentHolidays = remove === true
+        ? currentHolidays.filter(day => !holiday.includes(day)) // Filter out anything that's already there
+        : [...new Set([...currentHolidays, ...holiday])]; // Or add the new ones.  Use a set to get unique entries
+
+      await dynamo.putSetting('holidays', currentHolidays);
+      break;
+
+    case 'reserve':
+      // This could be called from either API or during deploy, handle both
+      let { peakReserve } = data;
+
+      // Make sure it's been 5 and 100%
+      peakReserve = Math.max(Math.min(100, peakReserve ?? 5), 5);
+
+      // Set the value in DynamoDB
+      await dynamo.putSetting('peakReserve', peakReserve);
+      break;
+
+    default:
+      throw new Error(`Unsupported setting: ${setting}`);
+  }
+
+  return {
+    statusCode: 204,
+    body: ""
+  }
+}
+
+export const adjuster = async () => {
+  let err, battery, peakReserve, holidays;
+
+  // Make sure authentication with the Tesla API is all set
+  [err] = await to(prepareTeslaClient());
+  if (err) return adjustError('Error configuring Tesla API Client', err);
+
+  // Get the on-peak hours and see if we should be in on-peak mode
+  [err, battery] = await to(tesla.getBatteryInfo());
+  if (err) return adjustError('Error getting Tesla Powerwall Information', err);
+
+  // Make sure we're in the right mode first of all
+  if (!battery.isTou()) return adjustError('Error adjusting Tesla Powerwall reserve', 'The Powerwall is not in TOU mode.');
+
+  [err, peakReserve] = await to(dynamo.getSetting('peakReserve').then(reserve => reserve ?? DEFAULT_PEAK_RESERVE));
+  if (err) return adjustError('Error getting configured reserve', err);
+
+  [err, holidays] = await to(dynamo.getSetting('holidays').then(holidays => Array.isArray(holidays) ? holidays : []));
+  if (err) return adjustError('Error getting configured holidays', err);
+
+  const desiredReserve = !isHoliday(holidays) && inPeakTime(battery.peakSchedule()) ? peakReserve : MAX_RESERVE;
+
+  if (battery.reserveLevel() === desiredReserve) {
+    info(`Battery reserve level (${battery.reserveLevel()}%) matches desired reserve (${desiredReserve}%); not changing`);
+    return;
+  }
+
+  info(`Reserve level (${battery.reserveLevel()}%) does not match desired reserve (${desiredReserve}%); updating`);
+  [err] = await to(tesla.setBatteryReserve(battery.siteId(), desiredReserve));
+  if (err) return adjustError('Error adjusting Tesla Powerwall reserve', err);
+};
+
 /**
- * @returns {Promise<*>}
+ * @param holidays
+ * @returns {boolean}
  */
-async function isHoliday() {
-  return dynamo.getSetting('holidays')
-    .then(holidays => Array.isArray(holidays) && holidays.includes(DateTime.now().toLocaleString()));
+function isHoliday(holidays) {
+  return holidays.includes(DateTime.now().toLocaleString());
 }
 
 /**
@@ -173,14 +185,21 @@ function inPeakTime(peakSchedule) {
       now.startOf('day').plus({ seconds: block.end_seconds })
     );
 
+    debug(`Peak interval: ${peakInterval.toString()}`);
+
     // If our current time is within the interval, it's in peak time
     if (peakInterval.contains(now)) {
-      debug(`Peak interval matches: ${now.toString()} is between ${peakInterval.toString()}`);
+      debug(`Peak interval matches: ${now.toString()}`);
       return true;
     }
   }
 
   return false;
+}
+
+function adjustError(subject, error) {
+  const message = `An error was encountered setting the battery reserve:\n\n${error.toString()}`;
+  return sns.notify(subject, message).then(() => null);
 }
 
 /**
@@ -206,7 +225,7 @@ async function prepareTeslaClient () {
   info('No auth token or it is expired, getting new one with refresh token');
 
   // Make sure we have a refresh token
-    if (typeof refreshToken === 'undefined') {
+  if (typeof refreshToken === 'undefined') {
     throw new Error('Unable to get new auth token, no refresh token');
   }
 

@@ -46,10 +46,10 @@ Resources:
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref SettingsTable
-  NotifyFunction:
+  SettingsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: app.notify
+      Handler: app.settings
       Environment:
         Variables:
           SNS_TOPIC: !Ref NotificationTopic
@@ -57,24 +57,13 @@ Resources:
         Api:
           Type: HttpApi
           Properties:
-            Method: POST
-            Path: /notify
-      Policies:
-        - SNSCrudPolicy:
-            TopicName: !GetAtt NotificationTopic.TopicName
-  HolidayFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.holiday
-      Events:
-        Api:
-          Type: HttpApi
-          Properties:
-            Method: POST
-            Path: /holiday
+            Method: ANY
+            Path: /settings/{setting}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SettingsTable
+        - SNSCrudPolicy:
+            TopicName: !GetAtt NotificationTopic.TopicName
   AdjustFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -93,20 +82,6 @@ Resources:
             TableName: !Ref SettingsTable
         - SNSCrudPolicy:
             TopicName: !GetAtt NotificationTopic.TopicName
-  PeakReserveFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.reserve
-      Runtime: nodejs14.x
-      Events:
-        Api:
-          Type: HttpApi
-          Properties:
-            Method: POST
-            Path: /reserve
-      Policies:
-        - DynamoDBWritePolicy:
-            TableName: !Ref SettingsTable
 
 Outputs:
   BaseApi:

@@ -48,7 +48,7 @@ You'll also want to update the `samconfig.toml` and change the parameter overrid
 Use a tool like httpie (used below) or cURL to remotely call the login endpoint.  This is the bare minimum for this to simply start working.
 
 ```bash
-$ http post http://endpoint.execute-api.us-east-1.amazonaws.com/login username=AzureDiamond@gmail.com password=hunter2 mfaPassCode=000000
+$ http POST http://endpoint.execute-api.us-east-1.amazonaws.com/login username=AzureDiamond@gmail.com password=hunter2 mfaPassCode=000000
 ```
 
 ### Peak Reserve
@@ -56,7 +56,7 @@ $ http post http://endpoint.execute-api.us-east-1.amazonaws.com/login username=A
 The default Peak Reserve is set to 20% during peak time.  If you'd like to change that, a simple API call can adjust that like so:
 
 ```bash
-$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/reserve PeakReserve=30
+$ http POST https://endpoint.execute-api.us-east-1.amazonaws.com/settings/reserve PeakReserve=30
 ```
 
 ### Notifications
@@ -64,7 +64,7 @@ $ http post https://endpoint.execute-api.us-east-1.amazonaws.com/reserve PeakRes
 If you'd like to get an email notification if the script fails to adjust the peak reserve, you'll want to call this API endpoint to subscribe to the notification topic.  Be sure to check your email afterwards to confirm the subscription.  Note that if something causes the adjustment to fail, and it's not a temporary failure, you'll receive an email alert every 15 minutes when it continues to try.
 
 ```bash
-$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/notify email=AzureDiamond@gmail.com
+$ http POST https://endpoint.execute-api.us-east-1.amazonaws.com/settings/notify email=AzureDiamond@gmail.com
 ```
 
 ### Holidays
@@ -72,24 +72,19 @@ $ http post https://endpoint.execute-api.us-east-1.amazonaws.com/notify email=Az
 If you'd like to configure/add holidays where the entire day is off-peak, you can add them like so:
 
 ```bash
-$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-07-04", "2021-09-06", "2021-11-11", "2021-11-25", "2021-12-25"]'
-```
-
-The output will be a list of all holidays currently in the database:
-
-```bash
-[
-    "5/31/2021",
-    "7/4/2021",
-    "9/6/2021",
-    "11/11/2021",
-    "11/25/2021",
-    "12/25/2021"
-]
+$ http POST https://endpoint.execute-api.us-east-1.amazonaws.com/settings/holiday holiday:='["2021-07-04", "2021-09-06", "2021-11-11", "2021-11-25", "2021-12-25"]'
 ```
 
 If you accidentally add a holiday you want to remove, it's easy as well:
 
 ```bash
-$ http post https://endpoint.execute-api.us-east-1.amazonaws.com/holiday holiday:='["2021-12-25"]' remove:=true
+$ http POST https://endpoint.execute-api.us-east-1.amazonaws.com/settings/holiday holiday:='["2021-12-25"]' remove:=true
+```
+
+### Viewing Settings
+
+You can view individual settings by doing a GET call to the setting's endpoint, or you can get all settings like so:
+
+```bash
+$ http https://endpoint.execute-api.us-east-1.amazonaws.com/settings/all
 ```

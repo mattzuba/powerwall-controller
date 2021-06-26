@@ -10,7 +10,7 @@ export class Battery {
 
   peakSchedule () {
     if (!Array.isArray(this._batteryInfo?.tou_settings?.schedule)) {
-      throw new Error('No TOU schedule is set');
+      return [];
     }
 
     return this._batteryInfo.tou_settings.schedule.filter(block => block.target === 'peak');
