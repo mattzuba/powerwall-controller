@@ -33,6 +33,11 @@ Resources:
         Type: String
   NotificationTopic:
     Type: AWS::SNS::Topic
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:

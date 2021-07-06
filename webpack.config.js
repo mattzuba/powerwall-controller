@@ -3,16 +3,7 @@ const AwsSamPlugin = require("aws-sam-webpack-plugin");
 
 const awsSamPlugin = new AwsSamPlugin({vscodeDebug: false});
 
-module.exports = {
-  entry: awsSamPlugin.entry(),
-
-  // Write the output to the .aws-sam/build folder
-  output: {
-    filename: (chunkData) => awsSamPlugin.filename(chunkData),
-    libraryTarget: "commonjs2",
-    path: path.resolve(".")
-  },
-
+const common = {
   // Resolve .js extensions
   resolve: {
     extensions: [".js"]
@@ -29,8 +20,23 @@ module.exports = {
     rules: [
       { test: /\.jsx?$/, exclude: /node_modules/, loader: "babel-loader" }
     ]
-  },
-
-  // Add the AWS SAM Webpack plugin
-  plugins: [awsSamPlugin]
+  }
 };
+
+module.exports = [
+  {
+    entry: awsSamPlugin.entry(),
+
+    // Write the output to the .aws-sam/build folder
+    output: {
+      filename: (chunkData) => awsSamPlugin.filename(chunkData),
+      libraryTarget: "commonjs2",
+      path: path.resolve(".")
+    },
+
+    // Add the AWS SAM Webpack plugin
+    plugins: [awsSamPlugin],
+
+    ...common
+  }
+];
