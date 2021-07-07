@@ -7,9 +7,14 @@
     "postinstall": "cd src && npm install",
     "lint": "semistandard ./src/**/*.js",
     "invoke": "npm run build && sam local invoke",
-    "start-api": "npm run build && sam local start-api",
-    "build": "webpack",
-    "deploy": "sam deploy --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset"
+    "start": "run-p start:*",
+    "start:api": "sam local start-api",
+    "start:frontend": "cd ./src/frontend && npm run serve",
+    "build": "run-p build:*",
+    "build:api": "webpack",
+    "build:frontend": "cd ./src/frontend && npm run build",
+    "deploy": "run-s deploy:api",
+    "deploy:api": "sam deploy --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset"
   },
   "author": "",
   "license": "BSD-3-clause",

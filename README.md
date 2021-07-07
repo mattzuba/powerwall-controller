@@ -33,9 +33,28 @@ If you want to toy with this locally, you'll need to install the following:
 * Node v14
 * Any other associated requirements for the tools above
 
+#### Running Locally
+
+Note that running this locally is only for development purposes; NOT for running this on a regular basis.
+
+First you need to get DynamoDB running locally:
+
+`docker run -d --restart=unless-stopped --user root -v dynamodb:/home/dynamodblocal/data --network lambda-local --name=dynamodb-local -p 127.0.0.1:8000:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ./data`
+
+Now you'll need to get a table initialized to work with:
+
+`aws dynamodb create-table --endpoint-url http://localhost:8000 --table-name Settings --attribute-definitions AttributeName=Key,AttributeType=S --key-schema AttributeName=Key,KeyType=HASH --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1`
+
+Now you'll need two terminal windows to run this.  Run one of each of the commands below in each window:
+
+* `npm run build:api -- -w`
+* `npm run start`
+
+The first command builds the API code and puts webpack into _watch_ mode.  The second command starts the local API Gateway and the Vue application and launches the Vue app in your browser.
+
 ## Deployment
 
-This script uses Github actions to deploy to AWS, the only thing you need to do is log into the AWS Console and generate an access key and secret key and store those in your Secrets in Github.
+This script uses GitHub actions to deploy to AWS, the only thing you need to do is log into the AWS Console and generate an access key and secret key and store those in your Secrets in GitHub.
 
 ![image](https://user-images.githubusercontent.com/1494713/120593934-01d3e580-c3f5-11eb-8646-1112497daa52.png)
 
