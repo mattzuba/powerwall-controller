@@ -12,7 +12,6 @@ parameter_overrides = "TimeZone=\"America/Phoenix\" Debug=\"*:info\""
 parameter_overrides = "TimeZone=\"America/Phoenix\" Debug=\"*,-follow-redirects\""
 docker_network = "lambda-local"
 warm_containers = "EAGER"
-static_dir = "../../.s3-build"
 
 [default.local_invoke.parameters]
 parameter_overrides = "TimeZone=\"America/Phoenix\" Debug=\"*,-follow-redirects\""

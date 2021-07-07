@@ -15,7 +15,7 @@ Parameters:
 Globals:
   Function:
     Timeout: 30
-    CodeUri: ./src
+    CodeUri: ./src/api
     Runtime: nodejs14.x
     AutoPublishAlias: live
     Environment:
