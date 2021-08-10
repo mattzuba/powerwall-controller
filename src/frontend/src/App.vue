@@ -51,5 +51,9 @@ export default {
   data: () => ({
     //
   }),
+
+  metaInfo: {
+    titleTemplate: '%s | Powerwall Controller'
+  }
 };
 </script>

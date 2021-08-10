@@ -11,5 +11,9 @@
     components: {
       HelloWorld,
     },
+
+    metaInfo: {
+      title: "Home"
+    }
   }
 </script>
